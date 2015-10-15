@@ -1,6 +1,7 @@
 package geoquiz.android.bignerdranch.com.geoquiz;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -15,12 +16,14 @@ public class QuizActivity extends Activity {
 
     private static final String TAG = "QuizActivity";
 
-    private Button mTrueButton;
-    private Button mFalseButton;
-    private Button mNextButton;
-    private Button mPrevButton;
-    private TextView mQuestionTextView;
+    private Button mTrueButton;             // true button
+    private Button mFalseButton;            // false button
+    private Button mNextButton;             // next button
+    private Button mPrevButton;             // previous button
+    private Button mCheatButton;            // cheat button
+    private TextView mQuestionTextView;     // text view, displays the current question
 
+    // question bank, holds all the questions to be displayed to the user
     private TrueFalse[] mQuestionBank = new TrueFalse[] {
             new TrueFalse(R.string.question_oceans, true),
             new TrueFalse(R.string.question_mideast, false),
@@ -29,53 +32,68 @@ public class QuizActivity extends Activity {
             new TrueFalse(R.string.question_asia, true),
     };
 
-    private int mCurrentIndex = 0;
-
+    private int mCurrentIndex = 0;          // holds the current index of the question bank
+    private boolean mIsCheater;
+    // updates the question
     private void updateQuestion() {
         Log.d(TAG, "Updating question text for question #" + mCurrentIndex, new Exception());
         int question = mQuestionBank[mCurrentIndex].getQuestion();
         mQuestionTextView.setText(question);
     }
 
+    // changes the question to the next question, updates all buttons and the question text view
     private void nextQuestion() {
         mCurrentIndex = ( mCurrentIndex + 1 ) % mQuestionBank.length;
         updateButtons();
         updateQuestion();
     }
-
+    // changes the question to the previous question, updates all buttons and the question text view
     private void prevQuestion() {
         mCurrentIndex = ( mCurrentIndex - 1 ) % mQuestionBank.length;
         updateButtons();
         updateQuestion();
     }
-
+    // determines if the next and prev buttons are visible or invisible
     private void updateButtons() {
-        if ( mCurrentIndex > 0 ) {
+        if ( mCurrentIndex > 0 ) {  // if the current index is not equal the first question
             mPrevButton.setVisibility( View.VISIBLE );
         }
-        if ( mCurrentIndex == mQuestionBank.length - 1 ) {
+        if ( mCurrentIndex == mQuestionBank.length - 1 ) {  // if the question is equal to the last question
             mNextButton.setVisibility( View.INVISIBLE );
         }
-        if ( mCurrentIndex == 0 ) {
+        if ( mCurrentIndex == 0 ) { // if the current index is equal to the first question
             mPrevButton.setVisibility( View.INVISIBLE );
         }
-        if ( mCurrentIndex < mQuestionBank.length - 1 ) {
+        if ( mCurrentIndex < mQuestionBank.length - 1 ) {   // if the current index is not equal to the last question
             mNextButton.setVisibility( View.VISIBLE );
         }
     }
 
+    // checks if the question is true or false
     private void checkAnswer(boolean userPressedTrue) {
         boolean answerIsTrue = mQuestionBank[mCurrentIndex].isTrueQuestion();
 
         int messageResId = 0;
 
-        if (userPressedTrue == answerIsTrue) {
-            messageResId = R.string.correct_toast;
+        if (mIsCheater) {
+            messageResId = R.string.judgement_toast;
         } else {
-            messageResId = R.string.incorrect_toast;
+            if (userPressedTrue == answerIsTrue) {
+                messageResId = R.string.correct_toast;
+            } else {
+                messageResId = R.string.incorrect_toast;
+            }
         }
 
         Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (data == null) {
+            return;
+        }
+        mIsCheater = data.getBooleanExtra(CheatActivity.EXTRA_ANSWER_SHOWN, false);
     }
 
     @Override
@@ -120,6 +138,17 @@ public class QuizActivity extends Activity {
             @Override
             public void onClick(View v) {
                 prevQuestion();
+            }
+        });
+
+        mCheatButton = (Button)findViewById(R.id.cheat_button);
+        mCheatButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent( QuizActivity.this, CheatActivity.class);
+                boolean answerIsTrue = mQuestionBank[mCurrentIndex].isTrueQuestion();
+                i.putExtra(CheatActivity.EXTRA_ANSWER_IS_TRUE, answerIsTrue);
+                startActivityForResult(i, 0);
             }
         });
 
